@@ -106,7 +106,7 @@ nh <- vector('numeric',length=41)
 years <- select(gss,year)
 cat("Sample's size per year:\n")   
 ```
-```{r cont1, echo=FALSE}
+```{r cont1, echo=FALSE, comment=""}
 for (i in 1972:2012){
     nh[i-1971] <- nrow(filter(years,year == i))
     if (nh[i-1971] > 0){cat(sprintf('year: %d: %d\n',i,nh[i-1971]))}
