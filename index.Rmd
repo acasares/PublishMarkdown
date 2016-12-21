@@ -107,16 +107,18 @@ Let's get familiar with the several samples' size, one for each survey year.
 ```{r sample_size, comment=""}
 nh <- vector('numeric',length=41)
 years <- select(gss,year)
-cat("Sample's size per year:\n")
+cat("Sample's size per year:\n")   
+```
+```{r cont1, echo=FALSE}
 for (i in 1972:2012){
     nh[i-1971] <- nrow(filter(years,year == i))
     if (nh[i-1971] > 0){cat(sprintf('year: %d: %d\n',i,nh[i-1971]))}
 }
 cat(sprintf("Total observation's number: %d\nMean sample size per year: %6.2f\n",sum(nh),mean(nh)))
-```
+```    
 These numbers agree with the official GSS information[^3].  All the samples are by far shorter than 10% of american population, so, under that concept, won't be independence issues. 
 
-A crucial point is which variables are we going to use. From the gss documentation, we find them under the heading: "Controversial Social Issues", in the group "Violent Experiences".    
+A crucial point is which variables are we going to use. From the GSS documentation, we find them under the heading: "Controversial Social Issues", in the group "Violent Experiences".    
 
 There are four of them, related with gun possession:     
 - **owngun**: Have gun in home  

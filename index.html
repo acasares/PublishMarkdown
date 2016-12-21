@@ -209,46 +209,41 @@ Those with mental and/or physical conditions that prevent them from doing the su
 <p>Let’s get familiar with the several samples’ size, one for each survey year.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nh &lt;-<span class="st"> </span><span class="kw">vector</span>(<span class="st">'numeric'</span>,<span class="dt">length=</span><span class="dv">41</span>)
 years &lt;-<span class="st"> </span><span class="kw">select</span>(gss,year)
-<span class="kw">cat</span>(<span class="st">&quot;Sample's size per year:</span><span class="ch">\n</span><span class="st">&quot;</span>)</code></pre></div>
+<span class="kw">cat</span>(<span class="st">&quot;Sample's size per year:</span><span class="ch">\n</span><span class="st">&quot;</span>)   </code></pre></div>
 <pre><code>Sample's size per year:</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">for (i in <span class="dv">1972</span>:<span class="dv">2012</span>){
-    nh[i<span class="dv">-1971</span>] &lt;-<span class="st"> </span><span class="kw">nrow</span>(<span class="kw">filter</span>(years,year ==<span class="st"> </span>i))
-    if (nh[i<span class="dv">-1971</span>] &gt;<span class="st"> </span><span class="dv">0</span>){<span class="kw">cat</span>(<span class="kw">sprintf</span>(<span class="st">'year: %d: %d</span><span class="ch">\n</span><span class="st">'</span>,i,nh[i<span class="dv">-1971</span>]))}
-}</code></pre></div>
-<pre><code>year: 1972: 1613
-year: 1973: 1504
-year: 1974: 1484
-year: 1975: 1490
-year: 1976: 1499
-year: 1977: 1530
-year: 1978: 1532
-year: 1980: 1468
-year: 1982: 1860
-year: 1983: 1599
-year: 1984: 1473
-year: 1985: 1534
-year: 1986: 1470
-year: 1987: 1819
-year: 1988: 1481
-year: 1989: 1537
-year: 1990: 1372
-year: 1991: 1517
-year: 1993: 1606
-year: 1994: 2992
-year: 1996: 2904
-year: 1998: 2832
-year: 2000: 2817
-year: 2002: 2765
-year: 2004: 2812
-year: 2006: 4510
-year: 2008: 2023
-year: 2010: 2044
-year: 2012: 1974</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cat</span>(<span class="kw">sprintf</span>(<span class="st">&quot;Total observation's number: %d</span><span class="ch">\n</span><span class="st">Mean sample size per year: %6.2f</span><span class="ch">\n</span><span class="st">&quot;</span>,<span class="kw">sum</span>(nh),<span class="kw">mean</span>(nh)))</code></pre></div>
-<pre><code>Total observation's number: 57061
-Mean sample size per year: 1391.73</code></pre>
+<pre><code>## year: 1972: 1613
+## year: 1973: 1504
+## year: 1974: 1484
+## year: 1975: 1490
+## year: 1976: 1499
+## year: 1977: 1530
+## year: 1978: 1532
+## year: 1980: 1468
+## year: 1982: 1860
+## year: 1983: 1599
+## year: 1984: 1473
+## year: 1985: 1534
+## year: 1986: 1470
+## year: 1987: 1819
+## year: 1988: 1481
+## year: 1989: 1537
+## year: 1990: 1372
+## year: 1991: 1517
+## year: 1993: 1606
+## year: 1994: 2992
+## year: 1996: 2904
+## year: 1998: 2832
+## year: 2000: 2817
+## year: 2002: 2765
+## year: 2004: 2812
+## year: 2006: 4510
+## year: 2008: 2023
+## year: 2010: 2044
+## year: 2012: 1974</code></pre>
+<pre><code>## Total observation's number: 57061
+## Mean sample size per year: 1391.73</code></pre>
 <p>These numbers agree with the official GSS information<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a>. All the samples are by far shorter than 10% of american population, so, under that concept, won’t be independence issues.</p>
-<p>A crucial point is which variables are we going to use. From the gss documentation, we find them under the heading: “Controversial Social Issues”, in the group “Violent Experiences”.</p>
+<p>A crucial point is which variables are we going to use. From the GSS documentation, we find them under the heading: “Controversial Social Issues”, in the group “Violent Experiences”.</p>
 <p>There are four of them, related with gun possession:<br />
 - <strong>owngun</strong>: Have gun in home<br />
 - <strong>pistol</strong>: Pistol or revolver in home<br />
