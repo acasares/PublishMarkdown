@@ -1,0 +1,351 @@
+---
+title: "Weapons' reduction inference with GSS data"
+author: A.Casares M.
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r fake-load, eval = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(reshape2)
+library(gplots)
+```
+```{r load-packages, include = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(reshape2)
+library(gplots)
+```
+
+### Load data
+```{r load-data}
+load("be3_gss.Rdata")
+```
+
+
+
+* * *
+
+## Part 1: Data
+The General Social Survey (GSS) is a sociological survey used to collect information and keep 
+a historical record of the concerns, experiences, attitudes, and practices of residents of the 
+United States.[^1]   
+
+The data we downloaded and count on is an extract of the database of GSS, oriented to student's analysis and formated for easy R processing.  
+
+### Methodology of the survey:
+The survey is conducted face-to-face with an in-person interview by the National Opinion Research Center (NORC) at the University of Chicago.
+It was conducted every year from 1972 to 1994 (except in 1979, 1981, and 1992). Since 1994, every other year.  
+
+The NORC national probability sample is a stratified, multistage area probability sample of clusters
+of households in the continental United States.  
+
+The GSS sample is drawn using an area probability design that randomly selects respondents in households 
+across the United States to take part in the survey. Respondents that become part of the GSS sample
+are from a mix of urban, suburban, and rural geographic areas. Participation in the study is strictly
+voluntary.
+ 
+### Sample' size and target: 
+From 1972 until 1993, the GSS was administered almost annually. The target sample size for the 
+annual surveys was 1500.   
+The target population of the GSS is adults (18+) living in households in the United States. From 
+1972 to 2004 it was further restricted to those able to do the survey in English. From 2006 to present
+it has included those able to do the survey in English or Spanish. Those unable to do the survey in
+either English or Spanish are out-of-scope. Residents of institutions and group quarters are out-of-scope.    
+Those with mental and/or physical conditions that prevent them from doing the survey, but who live
+in households are part of the target population and in-scope. In the reinterviews those who have 
+died, moved out of the United States, or who no longer live in a household have left the target 
+population and are out-of-scope.  Starting in 2006 the GSS samples Spanish speakers in addition to
+English speakers.  
+
+There are some years when the survey does not contain the variables needed for this studio. Those years are identified and listed.  
+
+In this project I'll use samples with the same constitution, only from different years. They are not simply randomized, but stratified in stages, and its randomness might be objectable, since there are several technique criteria in the selection that could affect that condition. For example, they are volunteers (thus, the assignment is not random); there are excluded groups in all or several applications of the survey: people not living in households, foreign-language-speaking people (spanish was excluded until 2006), etc.    
+  
+Furthermore, there is an important warning in the course's reference book[^2] about this point:  
+"The analysis methods introduced in this book would need to be extended to analyze data collected using stratified sampling".    
+  
+So, in this case one should be very careful when generalizing the results from the confidence 
+interval calculation. However, for the sake of academic illustration, I'll continue with the program,
+but any conclusion arrived should be seen under the prism of these observations.    
+
+* * *
+
+## Part 2: Research question   
+
+#### Does the proportion of american residents who own guns show an increasing or decreasing statistically significative tendency during the period of GSS coberture?   
+To set up the process, we'll estimate, on a survey year basis, using statistical inference techniques, the population's difference between each such proportion and the corresponding to the last year in our data base, as a common reference. The analysis of the obtained time series will hopefully give us an answer to the proposed question. 
+
+Even as an outsider, I consider this question, about one of the most candent and controversial subjects in american politics, quite important. Each time that a crazy shooter kills some innocent people by firing them with his own gun, the discussion about the convenience of reinforce the laws restricting possession of firearms spreads through each state and the whole USA. It is worthy, I think, to know if the several initiatives and law projects that has been presented along the former years have had some result, and a reduction in the proportion of gun owners has been reached.   
+
+* * *
+
+## Part 3: Exploratory data analysis
+The dataframe we've been provided with is quite large:
+```{r howbig, comment = ""}
+dim(gss)
+```
+That is, 57061 observations and 114 variables.    
+
+Instead of getting long listings or plots of the
+variables, we can use the provided documentation (gss.pdf),  built up precisely to giving us that kind of information. This is sufficient to have a good perspective of the data frame, define the research, and choose the variables that will be used on it.
+
+As a matter of fact, I did some extra Exploratory Data Analysis, looking for some research related with hispanic inmigrants in USA, but found that the codification of the variable **hispanic** has been changed from the document's (made consecutive), and besides many groups were too short to be useful. Anyway, this is not important for the present subject. 
+
+Let's get familiar with the several samples' size, one for each survey year.
+
+```{r sample_size, comment=""}
+nh <- vector('numeric',length=41)
+years <- select(gss,year)
+cat("Sample's size per year:\n")
+for (i in 1972:2012){
+    nh[i-1971] <- nrow(filter(years,year == i))
+    if (nh[i-1971] > 0){cat(sprintf('year: %d: %d\n',i,nh[i-1971]))}
+}
+cat(sprintf("Total observation's number: %d\nMean sample size per year: %6.2f\n",sum(nh),mean(nh)))
+```
+These numbers agree with the official GSS information[^3].  All the samples are by far shorter than 10% of american population, so, under that concept, won't be independence issues. 
+
+A crucial point is which variables are we going to use. From the gss documentation, we find them under the heading: "Controversial Social Issues", in the group "Violent Experiences".    
+
+There are four of them, related with gun possession:     
+- **owngun**: Have gun in home  
+- **pistol**: Pistol or revolver in home  
+- **shotgun**: Shotgun in home  
+- **rifle**: Rifle in home   
+
+As we wont make difference between the types of guns, it seems that the needed variable is **owngun**.
+But let's check if a 'Yes' answer on it is equivalent to a 'Yes' in one or several of the others, or even in none of them (there might be not-listed types of guns). If this is the case, we can use **owngun** as the desired variable, since it'd signal the posession of *any* gun.   
+
+Another decision we have to asume is the treatment we'll give to the NA and 'Refused' answers on the **owngun** variable.   
+
+Since none of them gives us clear information about the posession of an arm, we shall discard those answers, and consider only observations with 'Yes' or 'No' responses to **owngun**. This decision will actually reduce somehow the sample size, but will give us a two-level categorical variable to work with.
+
+Let's see the frequencies of possession of guns in the reference year, as shown by the four "Violent Experiences" variables, once filtered the "Refused" and NA answers:    
+```{r zeroth}
+weapons <- select(gss,owngun,pistol,shotgun,rifle,year)
+gun_12 <- filter(weapons, year == 2012, owngun == 'Yes' | owngun == 'No')
+freq = matrix(0,nrow=2,ncol=4)
+for (i in 1:4){freq[,i]=table(gun_12[i])[1:2]}
+freq <- freq/apply(freq,2,sum)
+colnames(freq) <- c('owngun','pistol','shotgun','rifle')
+rownames(freq) <- c('Yes','No')
+barplot(freq, legend.text = TRUE, xlab = 'Violent Experiences variables'
+        , ylab = 'Proportion', args.legend = list(x = "center"))
+title(main = "Gun owners among USA residents. Sample 2012", font = 4)
+```
+    
+This illustrative plot shows the gun owners proportions for the 2012 sample. At least we can see that the **owngun** variable has a 'Yes' proportion higher than each of the others, yet this is not enough to assure that englobes the rest.  
+
+Let's further check consistency between these variables, using the complete data.frame:   
+````{r First, comment = ""}
+weapons <- select(gss,caseid,owngun,pistol,shotgun,rifle,year)
+A <- weapons %>%
+    filter(owngun == 'Yes') 
+cat(sprintf('Sampled USA residents with owngun = Yes: %d\n',nrow(A)))
+B <- weapons %>%
+    filter(pistol == 'Yes' | shotgun == 'Yes' | rifle == 'Yes')
+# There cannot be cases where owngun = 'No' and any other gun variable = 'Yes':
+dif = vector("numeric", length = 1)
+dif <- setdiff(B$caseid,A$caseid)
+if (length(dif) == 0){
+    cat('OK: owngun variable does englobe several types of firearms, even when not specified.\n')
+    gun_yn <- filter(weapons, owngun == 'Yes' | owngun == 'No')
+} else {
+    cat(sprintf('Owngun variable does not englobe all type of arms: B=%d, A=%d.\n',nrow(B), nrow(A)))
+}
+```   
+    
+We may use Venn's diagrams to visualize the relationship among the 'Yes' domain of those variables:       
+```{r Venn,fig.height=5,fig.width=4,fig.align='center'}
+# Using Venn's diagrams confirms what we said:
+B <- weapons %>%
+    filter(pistol == 'Yes')
+C <- weapons %>%
+    filter(shotgun == 'Yes')
+D <- weapons %>%
+    filter(rifle == 'Yes')
+par(mar = c(0,0,0,0))
+venn(list(owngun=A$caseid,pistol=B$caseid,shootgun=C$caseid,rifle=D$caseid))
+```
+
+So, we'll use the two-level categorical variable **owngun** to do the research, comparing each time two samples: the corresponding to a former survey year, and that from the most recent year we have data from: 2012.    
+* * *
+
+## Part 4: Inference
+
+We will work with two categorical variables, (**owngun** from two different years), and evaluate the relationship between them. They have two levels each, a success and a failure, and according to them we'll categorize the variables. We'll calculate proportion of successes in the two groups,  based on our samples, and will compare this to each other to estimate how the proportion of successes in the population compares to each other. In other words, what we're going to do is to calculate a confidence interval for the difference between the two population proportions, that are unknown, using data from our samples.    
+
+In this estimation of the difference between two proportions of categorical variables, which is our parameter of interest, we will use the 95% confidence level for finding the interval and also for the hypotheses test, theoretically if success-failure condition is met, through simulation if not. 
+
+### Independence conditions:
+Within the anual sample, we want to make sure that sampled observations are independent of each other. However, we cannot be sure about it, because the sample is not simply random, but multistaged, and the assignment is not random either, because the surveyed subjects are volunteers. So we cannot pretend to find, for instance, causal relationships. But at least we do have our sample sizes less than 10% of the population.   
+
+Between samples, we can reasonably assure that the two groups are independent of each other, because the data are not paired. As for the sample size conditions, to ensure normality of the sampling distribution, there is the success-failure condition, that should be met in the first sample and in the second. The program checks this condition, and has found it met in all cases.       
+In short, we should be very careful about generalization at the end of the confidence interval calculation.
+
+### Success/failure condition:
+The other condition we need to meet, is the sample size and skew condition: whether we can assume the sampling distribution of the difference between the two proportions to be nearly normal.
+
+Since we're dealing with proportions, we check for this using the success/failure rule, in this case using the observed successes and observed failures, that should be both greater or equal to ten.   
+
+For the confidence intervals, this checking is included in the program: finds that the condition is always meet, and therefore, finds the confidence interval theoretically. However, it has also the option of simulation (using the function *inference*), when the condition is not met.   
+
+When dealing with hypothesis test, the success/failure uses the pooled proportion that we calculate, and the program breaks with a warning in the failure case. Nevertheless, such failure does not occur in this studio.     
+
+### Confidence intervals formulas:   
+We deal with the proportions of americans who own guns, reported in the survey.   
+For each survey year in the interval [1972, 2010]:  
+Parameter of interest:  $p_{year} - p_{2012}$  
+Point estimate: $\hat{p}_{year} - \hat{p}_{2012}$      
+
+To estimate the difference between the two compared proportions:   
+$p_{year} - p_{2012} = (\hat{p}_{year} - \hat{p}_{2012}) \pm z_{score} * SE_{(\hat{p}_{year} - \hat{p}_{2012})}$          
+Where the standard error is:        
+$SE_{(\hat{p}_{year} - \hat{p}_{2012})} = \sqrt{\frac{\hat{p}_{year}{(1-\hat{p}_{year})}}{n_{year}}+\frac{\hat{p}_{2012}{(1-\hat{p}_{2012})}}{n_{2012}}}$         
+
+### Hypothesis test formulas:
+For each comparison between proportion of a year and proportion of 2012:   
+
+#### Null Hypothesis: (*statu quo*)  
+There is not statistically significant difference in population's gun owner proportion between the considered year and the most recent data we have.   
+Ho: $p_{year} = p_{2012}$   
+
+#### Alternative Hypothesis:   
+There exists statistically significant difference in population's gun owner proportion between the considered year and the most recent data we have.    
+Ha: $p_{year} \ne p_{2012}$     
+
+To compute the p-value we need to use:   
+$\hat{p}_{pool} = \frac{Total\; successes}{total\; n} = \frac{successes_{year} + successes_{2012}}{n_{year}+n_{2012}}$   
+Now the Standard error is found as:   
+$SE_{(\hat{p}_{year} - \hat{p}_{2012})} = \sqrt{\frac{\hat{p}_{pool}{(1-\hat{p}_{pool})}}{n_{year}}+\frac{\hat{p}_{pool}{(1-\hat{p}_{pool})}}{n_{2012}}}$     
+$z = \frac{point \; estimate - null}{SE}$      
+And R gives us the p-value as: 2*pnorm(abs(z), lower.tail = FALSE).         
+```{r second, comment=""}
+max_left = 0; max_year = 0
+seq_ci <- vector("numeric",0)
+no_gundata <- vector("numeric",0)
+# Only considers Yes/No answers to owngun in the year's sample (discards 'Refused' and NA's): 
+n_us12 <- nrow(filter(gun_yn, year == 2012))
+armed12 <- weapons %>%
+    filter(owngun == 'Yes', year == 2012)
+narm12 <- nrow(armed12)
+p_hat_12 <- narm12/n_us12 # Sample proportion of declared weapons in 2012.
+cat(sprintf("Sampled USA's residents owning guns in 2012: %d, proportion: %6.4f\n",narm12,p_hat_12))
+# Check success/failure condition on 2012:
+if (narm12 >= 10 & n_us12 - narm12 >= 10){sf12 = TRUE}
+for (iy0 in 1972:2010){
+    init = nh[iy0-1971]
+    if (init > 0){
+        n_us00 <- nrow(filter(gun_yn,year == iy0))
+        if (n_us00){
+            weapons <- select(gun_yn, owngun,year)
+            weapons <- filter(weapons, year %in% c(iy0,2012))
+            weapons <- mutate(weapons, year = as.factor(year))
+            weapons$owngun <- factor(weapons$owngun)
+            armed00 <- weapons %>%
+                filter(owngun == 'Yes', year == iy0)
+            narm00 <- nrow(armed00)
+            p_hat_0 <- narm00/n_us00  # Sample proportion of declared weapons in year iy0.
+            # Control the success/failure condition for both years to be compared:
+            if (sf12 & narm00 > 10 & n_us00 - narm00 > 10){  # Success/failure condition met:
+                if (1-is.nan(p_hat_0) & p_hat_0 > 0){  # Check valid p_hat_0
+                    # Use theoretical method
+                    # Confidence interval:
+                    SE <- sqrt(p_hat_0*(1-p_hat_0)/n_us00+p_hat_12*(1-p_hat_12)/n_us12)
+                    dif <- p_hat_0 - p_hat_12
+                    ci <- dif + c(-1,1)*1.96*SE
+                    # Hypothesis test: 
+                    p_pool <- (narm00+narm12)/(n_us00+n_us12)
+                    # Check success/failure condition;
+                    if (n_us00*p_pool < 10 & n_us00*(1-p_pool) < 10
+                        & n_us12*p_pool < 10 & n_us12*(1-p_pool) < 10){
+                        cat(sprintf('In hypothesis test, the success/failure condition is not met in year %d.\n',iy0))
+                        break
+                    }
+                    # find p-value:
+                    SEH <- sqrt(p_pool*(1-p_pool)/n_us00+p_pool*(1-p_pool)/n_us12)
+                    z <- dif/SEH 
+                    p_value <- 2*pnorm(z,lower.tail = FALSE)
+                    seq_ci <- cbind(seq_ci,c(iy0,ci,p_value))
+                    if (ci[1] > max_left){
+                        max_left <- ci[1];max_right <- ci[2]; maxy <- iy0
+                        maxarm <- weapons}
+                }
+            } else { # Success/failure condition not met:
+                ans <- inference(x = year, y = owngun, data = weapons, statistic = "proportion", type = "ci", 
+                                 method = "simulation", boot_method = "se", success = "Yes")
+                seq_ci <- cbind(seq_ci,c(iy0,ans$CI[1],ans$CI[2],NA))
+            }
+        } else {no_gundata <- c(no_gundata,iy0)}
+    }
+}
+if (length(no_gundata) > 0){
+    cat("The following surveys do not have data about gun's possession:\n")
+    print(no_gundata)
+}
+```    
+```{r third, comment=""}
+cat(sprintf('The greatest difference with 2012 in the proportion of declared weapons is seen in %d,
+where the 95%% CI (%d-2012) is [%6.4f,%6.4f].\n\n',maxy,maxy,max_left,max_right))
+seq_ci <- data.frame(t(seq_ci))
+names(seq_ci)<-c('year','left ext.','right ext.','p-value ')
+seq_ci <- mutate(seq_ci, signific = ifelse(seq_ci$left*seq_ci$right > 0,'signif.','No-signif.'))
+cat('Confidence interval and p-value in years with relevant data:\n')
+print(head(seq_ci,nrow(seq_ci)))
+```
+    
+This table contains the found confidence intervals and p-values, on an annual basis. As can be seen here and in the next plot, both agree in the information added at the last column: p-values less than the significance level (0.05) are paired with intervals whose extremes are both positive, meaning that the null hypothesis is rejected (i.e. the difference is statistically significant); while p-values greater than 0.05 correspond to intervals containing zero, (or not significant differences) in which case the null hypothesis fails to be rejected.  
+    
+```{r plot1}
+ci_data <- data.frame(ci_id = c(seq_ci$year, seq_ci$year),
+                      ci_bounds = c(seq_ci$left, seq_ci$right),
+                      ci_signif = c(seq_ci$signif, seq_ci$signif))
+
+g <- ggplot(data = ci_data, aes(x = ci_bounds, y = ci_id, 
+                                group = ci_id, color = ci_signif)) +
+    geom_point(size = 2) +  # add points at the ends, size = 2
+    geom_line() +           # connect with lines
+    geom_vline(xintercept = 0, color = "darkgray") + # draw vertical line
+    scale_size_area() +
+    xlab('Diference in gun owners proportions') + 
+    ylab('survey year') +
+    ggtitle('Confidence interval for each year compared with 2012')
+
+print(g)
+```
+     
+The plot shows the infered population's 95% confidence intervals of the difference of gun owners proportions between each year and 2012. The red intervals correspond to not significative differences, as can be seen from the extremes including the 0 value, or, equivalently, from the p-value, greater than the significance level = 5%. The 1977's interval has the greater difference between proportions, and also has the least p-value (maximum reason for rejectig the null hypothesis). 
+```{r plot2, comment=""}
+inference(x = year, y = owngun, data = maxarm, statistic = "proportion", type = "ci", 
+          method = "theoretical", success = "Yes")
+```
+    
+The plot - made by function *inference* - shows the difference in observed proportions of USA gun owners for 1977 and 2012.        
+
+## Conclusions:   
+Data provides strong evidence that, statistically, the proportion of declared USA residents gun owners is significantly greater for the survey years before 1997 than in 2012, whilst there is no significant difference in such proportions in the period 1998 to 2010.   
+
+And the answer to the research question would be:   
+
+It can be seen a defined tendency of reduction in the proportion of gun owners in USA residents from 1972 to 1996, but the reduction has stalled from 1998. So far this century, the reduction is not statistical significant.
+
+However, as have been noted before, this conclusion must be taken very carefully. It's opposed, for instance, to the conclusion we might infer from the Gallup's survey about the acceptance of a law banning the possession of handguns, except by the police and other authorized personal (October 2013), covering the period since 1959, that has been addressed as an exercise in this course. 
+
+An idea for possible future research avoiding the shortcomings this study might have is the application to the data of the extended analysis methods formerly mentioned in the course's reference book.
+
+### Foot Notes:   
+
+[^1]: Wikipedia  
+[^2]: David M Diez, Christopher D Barr, Mine Cetinkaya-Rundel: "OpenIntro Statistics", Third Edition 
+[^3]: http://gss.norc.org/Pages/Faq.aspx
