@@ -1,2 +1,2 @@
 # PublishMarkdown
-This repository will point to the local E:\Projects\PublishMarkdown. Contains html pages.
+This repository will point to the local E:\Projects\NewPublishMarkdown. Contains html pages.
