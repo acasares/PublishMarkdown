@@ -31,9 +31,6 @@ library(gplots)
 ```{r load-data}
 load("be3_gss.Rdata")
 ```
-
-
-
 * * *
 
 ## Part 1: Data
