@@ -123,7 +123,7 @@ There are four of them, related with gun possession:
 - **shotgun**: Shotgun in home  
 - **rifle**: Rifle in home   
 
-As we wont make difference between the types of guns, it seems that the needed variable is **owngun**.
+As we won't make difference between the types of guns, it seems that the needed variable is **owngun**.
 But let's check if a 'Yes' answer on it is equivalent to a 'Yes' in one or several of the others, or even in none of them (there might be not-listed types of guns). If this is the case, we can use **owngun** as the desired variable, since it'd signal the posession of *any* gun.   
 
 Another decision we have to asume is the treatment we'll give to the NA and 'Refused' answers on the **owngun** variable.   
